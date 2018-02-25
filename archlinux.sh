@@ -429,7 +429,7 @@ tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_
 
 start_progress "Downloading and extracting ArchLinuxARM rootfs"
 
-wget --quiet -O - $tar_file | tar xzvvp -C /tmp/arfs/ >> ${LOGFILE} 2>&1
+curl -s -L --output - $tar_file | tar xzvvp -C /tmp/arfs/ >> ${LOGFILE} 2>&1
 
 end_progress
 
