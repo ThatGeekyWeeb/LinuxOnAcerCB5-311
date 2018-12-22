@@ -48,7 +48,6 @@ function exec_in_chroot () {
   fi
 }
 
-
 function setup_chroot () {
 
   mount -o bind /proc ${MY_CHROOT_DIR}/proc
@@ -85,15 +84,8 @@ function copy_chros_files () {
   echo alarm > ${MY_CHROOT_DIR}/etc/hostname
   echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> ${MY_CHROOT_DIR}/etc/hosts
 
-  KERN_VER=`uname -r`
-  #mkdir -p ${MY_CHROOT_DIR}/lib/modules/$KERN_VER/
-  #cp -ar /lib/modules/$KERN_VER/* ${MY_CHROOT_DIR}/lib/modules/$KERN_VER/
   mkdir -p ${MY_CHROOT_DIR}/lib/firmware/
   cp -ar /lib/firmware/* ${MY_CHROOT_DIR}/lib/firmware/
-
-  # remove tegra_lp0_resume firmware since it is owned by latest
-  # linux-nyan kernel package
-  #rm ${MY_CHROOT_DIR}/lib/firmware/tegra12x/tegra_lp0_resume.fw
 
   end_progress
 }
@@ -108,6 +100,8 @@ start_progress "Installing development base packages"
 # that belong to the wheel group
 #
 cat > ${MY_CHROOT_DIR}/install-develbase.sh << EOF
+pacman-key --init
+pacman-key --populate archlinuxarm
 pacman -Syyu --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
 usermod -aG wheel alarm
 sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
@@ -189,23 +183,26 @@ end_progress
 
 function install_kernel () {
 
-#start_progress "Installing kernel"
+start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
+wget https://github.com/reey/PKGBUILDs/releases/download/v4.19.10/linux-nyan-4.19.10-1-armv7h.pkg.tar.xz
+wget https://github.com/reey/PKGBUILDs/releases/download/v4.19.10/linux-nyan-chromebook-4.19.10-1-armv7h.pkg.tar.xz
+wget https://github.com/reey/PKGBUILDs/releases/download/v4.19.10/linux-nyan-headers-4.19.10-1-armv7h.pkg.tar.xz
+pacman -R --noconfirm linux-armv7
+yes n | pacman -U --noconfirm linux-nyan-*
 
-#pacman -R --noconfirm linux-armv7
 #pacman -Syy --needed --noconfirm linux-armv7-rc linux-armv7-rc-chromebook
-pacman -Syy --needed --noconfirm linux-armv7 linux-armv7-chromebook
+#pacman -Syy --needed --noconfirm linux-armv7 linux-armv7-chromebook
 dd if=/boot/vmlinux.kpart of=${target_kern}
 echo elan_i2c > /etc/modules-load.d/elan_touchpad.conf
 echo bq24735_charger > /etc/modules-load.d/bq2473_charger.conf
 
 EOF
 
-chmod a+x /tmp/arfs/install-kernel.sh
-chroot /tmp/arfs /bin/bash -c /install-kernel.sh
-rm /tmp/arfs/install-kernel.sh
+exec_in_chroot install-kernel.sh
 
+end_progress
 
 }
 
